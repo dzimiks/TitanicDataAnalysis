@@ -319,3 +319,78 @@ ggplot(data.combined[1:891,], aes(x = Embarked, fill = Survived)) +
   ylab("Total Count") +
   ylim(0, 300) +
   labs(fill = "Survived")
+
+# ====================
+# Exploratory Modeling
+# ====================
+
+library(randomForest)
+
+# Train a Random Forest with the default parameters using Pclass & Title
+rf.train.1 <- data.combined[1:891, c("Pclass", "Title")]
+rf.label <- as.factor(train$Survived)
+
+set.seed(1234)
+rf.1 <- randomForest(x = rf.train.1, y = rf.label, importance = TRUE, ntree = 1000)
+rf.1
+varImpPlot(rf.1)
+
+# Train a Random Forest using Pclass, Title & SibSp
+rf.train.2 <- data.combined[1:891, c("Pclass", "Title", "SibSp")]
+
+set.seed(1234)
+rf.2 <- randomForest(x = rf.train.2, y = rf.label, importance = TRUE, ntree = 1000)
+rf.2
+varImpPlot(rf.2)
+
+# Train a Random Forest using Pclass, Title & Parch
+rf.train.3 <- data.combined[1:891, c("Pclass", "Title", "Parch")]
+
+set.seed(1234)
+rf.3 <- randomForest(x = rf.train.3, y = rf.label, importance = TRUE, ntree = 1000)
+rf.3
+varImpPlot(rf.3)
+
+# Train a Random Forest using Pclass, Title, SibSp & Parch
+rf.train.4 <- data.combined[1:891, c("Pclass", "Title", "SibSp", "Parch")]
+
+set.seed(1234)
+rf.4 <- randomForest(x = rf.train.4, y = rf.label, importance = TRUE, ntree = 1000)
+rf.4
+varImpPlot(rf.4)
+
+# Train a Random Forest using Pclass, Title & Family.size
+rf.train.5 <- data.combined[1:891, c("Pclass", "Title", "Family.size")]
+
+set.seed(1234)
+rf.5 <- randomForest(x = rf.train.5, y = rf.label, importance = TRUE, ntree = 1000)
+rf.5
+varImpPlot(rf.5)
+
+# Train a Random Forest using Pclass, Title, SibSp & Family.size
+rf.train.6 <- data.combined[1:891, c("Pclass", "Title", "SibSp", "Family.size")]
+
+set.seed(1234)
+rf.6 <- randomForest(x = rf.train.6, y = rf.label, importance = TRUE, ntree = 1000)
+rf.6
+varImpPlot(rf.6)
+
+# Train a Random Forest using Pclass, Title, Parch & Family.size
+rf.train.7 <- data.combined[1:891, c("Pclass", "Title", "Parch", "Family.size")]
+
+set.seed(1234)
+rf.7 <- randomForest(x = rf.train.7, y = rf.label, importance = TRUE, ntree = 1000)
+rf.7
+varImpPlot(rf.7)
+
+
+
+
+
+
+
+
+
+
+
+
