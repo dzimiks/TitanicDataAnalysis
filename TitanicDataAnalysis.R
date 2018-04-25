@@ -706,10 +706,124 @@ rpart.3.cv.1
 # Plot
 prp(rpart.3.cv.1$finalModel, type = 0, extra = 1, under = TRUE)
 
+# =============
+# More analysis
+# ============= 
 
+# Rpart scores 0.80382
 
+# Subset our test records and features
+test.submit.df <- data.combined[892:1309, features]
 
+# Make predictions 
+rpart.3.preds <- predict(rpart.3.cv.1$finalModel, test.submit.df, type = "class")
+table(rpart.3.preds)
 
+# Write out a CSV file for submission to Kaggle
+submit.df <- data.frame(PassengerId = rep(892:1309), Survived = rpart.3.preds)
 
+write.csv(submit.df, file = "RPART_SUB_20180425_1.csv", row.names = FALSE)
 
+# Random forest scores 0.79904
+features <- c("Pclass", "New.title", "Ticket.party.size", "Avg.fare")
+rf.train.temp <- data.combined[1:891, features]
 
+set.seed(1234)
+rf.temp <- randomForest(x = rf.train.temp, y = rf.label, ntree = 1000)
+rf.temp
+
+test.submit.df <- data.combined[892:1309, features]
+
+# Make predictions
+rf.preds <- predict(rf.temp, test.submit.df)
+table(rf.preds)
+
+# Write out a CSV file for submission to Kaggle
+submit.df <- data.frame(PassengerId = rep(892:1309), Survived = rf.preds)
+
+write.csv(submit.df, file = "RF_SUB_20180425_1.csv", row.names = FALSE)
+
+# If we want to improve our model, a good place to start is focusing on where it 
+# gets things wrong!
+
+# First, let's explore our collection of features using mutual information to
+# gain some additional insight. Our intuition is that the plot of our tree
+# should align well to the definition of mutual information.
+library(infotheo)
+
+mutinformation(rf.label, data.combined$Pclass[1:891])
+mutinformation(rf.label, data.combined$Sex[1:891])
+mutinformation(rf.label, data.combined$SibSp[1:891])
+mutinformation(rf.label, data.combined$Parch[1:891])
+mutinformation(rf.label, discretize(data.combined$Fare[1:891]))
+mutinformation(rf.label, data.combined$Embarked[1:891])
+mutinformation(rf.label, data.combined$Title[1:891])
+mutinformation(rf.label, data.combined$Family.size[1:891])
+mutinformation(rf.label, data.combined$Ticket.first.char[1:891])
+mutinformation(rf.label, data.combined$Cabin.multiple[1:891])
+mutinformation(rf.label, data.combined$New.title[1:891])
+mutinformation(rf.label, data.combined$Ticket.party.size[1:891])
+mutinformation(rf.label, discretize(data.combined$Avg.fare[1:891]))
+
+# OK, now let's levarage the tsne algorithm to create a 2D representation of our data
+# suitable for visualization starting with folks our model gets right very often - females
+# and boys.
+library(Rtsne)
+
+most.correct <- data.combined[data.combined$New.title != "Mr.",]
+indexes <- which(most.correct$Survived != "None")
+
+tsne.1 <- Rtsne(most.correct[, features], check_duplicates = FALSE)
+
+ggplot(NULL, aes(x = tsne.1$Y[indexes, 1], 
+                 y = tsne.1$Y[indexes, 2], 
+                 color = most.correct$Survived[indexes])) +
+  geom_point() +
+  labs(color = "Survived") +
+  ggtitle("tsne 2D Visualization of Features for Females and Boys")
+
+# To get a baseline, let's use conditional mutual information on the tsne X and
+# Y features for females and boys in 1st and 2nd class. The intuition here is that
+# the combination of these features should be higher than any individual feature
+# we looked at above.
+condinformation(most.correct$Survived[indexes], discretize(tsne.1$Y[indexes,]))
+
+# As one more comparison, we can laverage conditional mutual information using
+# the top two features used in our tree plot - New.title and Pclass
+condinformation(rf.label, data.combined[1:891, c("New.title", "Pclass")])
+
+# OK, now let's take a look at adult males since our model has the biggest
+# potential upside for improving (i.e., the tree predicts incorrectly for 86
+# adult males). Let's visualize with tsne.
+misters <- data.combined[data.combined$New.title == "Mr.",]
+indexes <- which(misters$Survived != "None")
+
+tsne.2 <- Rtsne(misters[, features], check_duplicates = FALSE)
+
+ggplot(NULL, aes(x = tsne.2$Y[indexes, 1], 
+                 y = tsne.2$Y[indexes, 2], 
+                 color = misters$Survived[indexes])) +
+  geom_point() +
+  labs(color = "Survived") +
+  ggtitle("tsne 2D Visualization of Features for New.title and 'Mr.'")
+
+# Now conditional mutual information for tsne features for adult males
+condinformation(misters$Survived[indexes], discretize(tsne.2$Y[indexes,]))
+
+# Idea - How about creating tsne features for of the training data and
+# using them in our model?
+tsne.3 <- Rtsne(data.combined[, features], check_duplicates = FALSE)
+
+ggplot(NULL, aes(x = tsne.3$Y[1:891, 1], 
+                 y = tsne.3$Y[1:891, 2], 
+                 color = data.combined$Survived[1:891])) +
+  geom_point() +
+  labs(color = "Survived") +
+  ggtitle("tsne 2D Visualization of Features for all Training Data") 
+
+# Now conditional mutual information for tsne features for all training
+condinformation(data.combined$Survived[1:891], discretize(tsne.3$Y[1:891,]))
+
+# Add the tsne features to our data frame for use in model building
+data.combined$Tsne.x <- tsne.3$Y[,1]
+data.combined$Tsne.y <- tsne.3$Y[,2]
